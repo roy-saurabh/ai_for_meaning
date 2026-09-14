@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { checkCompanionText, isAllowedCompanionText } from '@/lib/companion/constraints';
 import { LocalReflectionProvider, echoOf, localReflect } from '@/lib/companion/local';
-import { COMPANION_STAGES, companionInputSchema } from '@/lib/companion/types';
+import { companionInputSchema } from '@/lib/companion/schema';
+import { COMPANION_STAGES, isCompanionInput } from '@/lib/companion/types';
 
 describe('companion output constraints', () => {
   it.each([
@@ -70,5 +71,19 @@ describe('LocalReflectionProvider', () => {
     expect(companionInputSchema.safeParse({ stage: 'song', history: [] }).success).toBe(false);
     expect(companionInputSchema.safeParse({ stage: 'diagnose' }).success).toBe(false);
     expect(companionInputSchema.safeParse({ stage: 'song', userText: 'x'.repeat(281) }).success).toBe(false);
+  });
+
+  it('browser validation agrees with the server schema', () => {
+    const cases: unknown[] = [
+      { stage: 'song', userText: 'hi' },
+      { stage: 'weather', weather: 'tense', movement: 'storm' },
+      { stage: 'song', history: [] },
+      { stage: 'diagnose' },
+      { stage: 'song', userText: 'x'.repeat(281) },
+      { stage: 'close', weather: 'y'.repeat(41) },
+      null,
+      'song',
+    ];
+    for (const c of cases) expect(isCompanionInput(c), JSON.stringify(c)).toBe(companionInputSchema.safeParse(c).success);
   });
 });

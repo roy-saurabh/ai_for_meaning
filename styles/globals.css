@@ -22,6 +22,7 @@
   --color-pale-blue: #8fb7ff;
 
   --font-display: var(--font-fraunces), 'Iowan Old Style', Georgia, serif;
+  --font-display-italic: var(--font-fraunces-italic), var(--font-fraunces), 'Iowan Old Style', Georgia, serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-space-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
@@ -101,6 +102,7 @@
     letter-spacing: -0.012em;
     line-height: 1.08;
     text-wrap: balance;
+    /* Display cut at every size (the upright Fraunces face is loaded with its opsz axis). */
     font-variation-settings: 'opsz' 96;
   }
   p {
@@ -301,8 +303,12 @@
   .link-quiet:hover {
     text-decoration-color: var(--color-gold);
   }
-  .serif-italic {
-    font-family: var(--font-display);
+  .serif-italic,
+  .font-display .italic,
+  .font-display em,
+  h1 em,
+  h2 em {
+    font-family: var(--font-display-italic);
     font-style: italic;
   }
   .text-warm-gradient {

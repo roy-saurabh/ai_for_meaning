@@ -29,14 +29,14 @@ export default function HomePage() {
       <section aria-labelledby="hero-title" className="relative flex min-h-[calc(100svh-var(--nav-h))] flex-col justify-center overflow-hidden pb-16 pt-6 md:pb-24">
         <div className="wrap flex flex-col items-center text-center">
           <HeroOrb />
-          <h1 id="hero-title" className="display-xl fade-in -mt-6 max-w-[16ch] md:-mt-10">
+          <h1 id="hero-title" className="display-xl -mt-6 max-w-[16ch] md:-mt-10">
             Technology that returns you to <span className="text-warm-gradient serif-italic pr-1">yourself</span>.
           </h1>
-          <p className="lead fade-in mx-auto mt-6 max-w-[46ch]">
+          <p className="lead mx-auto mt-6 max-w-[46ch]">
             A living mirror for noticing your inner weather — built to reflect rather than direct, and designed to become
             quieter as you need it less.
           </p>
-          <div className="fade-in mt-9 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
+          <div className="mt-9 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
             <Link href="/mirror" className="pill pill-primary w-full sm:w-auto">
               Enter the Mirror
             </Link>
@@ -44,7 +44,7 @@ export default function HomePage() {
               See how it works
             </a>
           </div>
-          <p className="fade-in mt-7 font-mono text-[0.72rem] tracking-[0.12em] text-faint">
+          <p className="mt-7 font-mono text-[0.72rem] tracking-[0.12em] text-faint">
             self-awareness · private by default · not therapy
           </p>
         </div>

@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 /**
  * The Witness-Companion contract.
  *
@@ -17,16 +15,28 @@ export type CompanionKind = (typeof COMPANION_KINDS)[number];
 export const COMPANION_TEXT_MAX = 200;
 export const COMPANION_USER_TEXT_MAX = 280;
 
-export const companionInputSchema = z
-  .object({
-    stage: z.enum(COMPANION_STAGES),
-    weather: z.string().trim().max(40).optional(),
-    movement: z.enum(['storm', 'stillness', 'song']).optional(),
-    userText: z.string().max(COMPANION_USER_TEXT_MAX).optional(),
-  })
-  .strict();
+export interface CompanionInput {
+  stage: CompanionStage;
+  weather?: string;
+  movement?: 'storm' | 'stillness' | 'song';
+  userText?: string;
+}
 
-export type CompanionInput = z.infer<typeof companionInputSchema>;
+/**
+ * Dependency-free validation for the browser (keeps Zod — which feature-detects eval — out of client
+ * bundles under the strict CSP). The server validates again with the Zod schema in ./schema.ts.
+ */
+export function isCompanionInput(value: unknown): value is CompanionInput {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  const allowed = new Set(['stage', 'weather', 'movement', 'userText']);
+  if (Object.keys(v).some((k) => !allowed.has(k))) return false;
+  if (!(COMPANION_STAGES as readonly unknown[]).includes(v.stage)) return false;
+  if (v.weather !== undefined && (typeof v.weather !== 'string' || v.weather.trim().length > 40)) return false;
+  if (v.movement !== undefined && !['storm', 'stillness', 'song'].includes(v.movement as string)) return false;
+  if (v.userText !== undefined && (typeof v.userText !== 'string' || v.userText.length > COMPANION_USER_TEXT_MAX)) return false;
+  return true;
+}
 
 export interface CompanionOutput {
   kind: CompanionKind;

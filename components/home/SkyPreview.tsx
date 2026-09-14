@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useMemo } from 'react';
+import { WhenVisible } from '@/components/primitives/WhenVisible';
 import { generateSky } from '@/lib/sky/generate';
 import type { SessionTrace } from '@/lib/storage/schema';
 
@@ -42,10 +43,12 @@ function illustrativeTraces(): SessionTrace[] {
 export function SkyPreview() {
   const sky = useMemo(() => generateSky(illustrativeTraces(), { dustCount: 110 }), []);
   return (
-    <SkyCanvas
+    <WhenVisible className="h-[260px] w-full md:h-[320px]">
+      <SkyCanvas
       sky={sky}
       className="h-[260px] w-full md:h-[320px]"
-      label="An illustrative Inner Sky: a scattering of teal, amber, violet, gold and pale-blue points of light."
-    />
+        label="An illustrative Inner Sky: a scattering of teal, amber, violet, gold and pale-blue points of light."
+      />
+    </WhenVisible>
   );
 }

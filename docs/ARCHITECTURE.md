@@ -83,6 +83,28 @@ saving, notices).
 - Trails are drawn as ghost sprites; the canvas is cleared every frame (destination-out fading leaves
   8-bit residue).
 
+## Measured performance
+
+Lighthouse 12, mobile preset (simulated slow 4G, 4× CPU), production standalone build, 14 Sep 2026:
+
+| Route | Performance | Accessibility | Best practices | SEO | LCP | TBT | CLS |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `/` | 91 | 100 | 100 | 100 | 3.5 s | 36–50 ms | 0 |
+| `/mirror` | 93 | 100 | 100 | 100 | 3.2 s | 74 ms | 0 |
+| `/science` | 92 | 100 | 100 | 100 | 3.3 s | 89 ms | 0 |
+
+Observed (unthrottled) first contentful paint is ≈ 150 ms. Simulated LCP is dominated by font and CSS
+transfer under slow 4G. Lessons encoded in the code:
+
+- LCP candidates (hero and page headings) must not start at `opacity: 0`; no entrance animation on them.
+- Canvas islands below the fold load through `WhenVisible`, not on hydration.
+- Only the upright display face and Inter are preloaded; italic and mono load on demand.
+- Keep Zod out of client bundles: Zod v4 probes `new Function("")`, which the strict CSP reports as a
+  violation. Browser validation uses a dependency-free guard (`isCompanionInput`); the server keeps Zod.
+
+The brief's LCP < 2.5 s target is met on real connections but not under Lighthouse's simulated slow 4G
+(≈ 3.2–3.5 s). Further gains would need self-subsetting the fonts or dropping a family.
+
 ## Rendering mode and CSP
 
 Every page is dynamically rendered because the CSP nonce is per request (`proxy.ts`). This costs a

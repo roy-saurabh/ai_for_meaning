@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState } from 'react';
+import { WhenVisible } from '@/components/primitives/WhenVisible';
 import { MEETING } from '@/content/mirror-copy';
 import { sceneFor } from '@/lib/generative/scenes';
 import { PRESET_WEATHER_IDS, WEATHER, type PresetWeatherId } from '@/lib/mirror/weather';
@@ -20,7 +21,9 @@ export function MirrorTeaser() {
   return (
     <div className="membrane membrane-lg reveal overflow-hidden" style={{ '--membrane-glow': 'rgba(154,140,255,0.08)' } as React.CSSProperties}>
       <div className="relative h-[min(62vh,500px)] min-h-[340px] bg-[radial-gradient(120%_90%_at_50%_0%,rgba(154,140,255,0.06),transparent_60%)]">
-        <FieldCanvas scene={scene} className="absolute inset-0 h-full w-full" fps={45} sceneKey={weather} />
+        <WhenVisible className="absolute inset-0" fallback={<div className="orb-static absolute left-1/2 top-[42%] h-24 w-24 -translate-x-1/2 -translate-y-1/2" />}>
+          <FieldCanvas scene={scene} className="absolute inset-0 h-full w-full" fps={45} sceneKey={weather} />
+        </WhenVisible>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 p-6 text-center md:p-10">
           <p className="label-mono text-teal">Meeting the weather · {WEATHER[weather].label}</p>
           <p className="serif-italic mx-auto mt-3 max-w-[26ch] text-[clamp(1.25rem,1rem+1.2vw,1.8rem)] leading-snug" aria-live="polite">

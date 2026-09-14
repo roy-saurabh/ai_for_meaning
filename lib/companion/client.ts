@@ -4,14 +4,14 @@
  */
 
 import { localReflect } from './local';
-import { companionInputSchema, type CompanionInput, type CompanionOutput } from './types';
+import { isCompanionInput, type CompanionInput, type CompanionOutput } from './types';
 
 const CLIENT_TIMEOUT_MS = 9_000;
 
 export async function requestReflection(input: CompanionInput, cloudEnabled: boolean): Promise<CompanionOutput> {
-  const parsed = companionInputSchema.safeParse(input);
-  if (!parsed.success) return localReflect({ stage: input.stage });
-  const local = localReflect(parsed.data);
+  const candidate: unknown = input;
+  if (!isCompanionInput(candidate)) return localReflect({ stage: input.stage });
+  const local = localReflect(input);
   // Safety and offline paths never need the network.
   if (!cloudEnabled || local.kind === 'ground' || (typeof navigator !== 'undefined' && !navigator.onLine)) {
     return local;
@@ -22,7 +22,7 @@ export async function requestReflection(input: CompanionInput, cloudEnabled: boo
     const res = await fetch('/api/companion', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(parsed.data),
+      body: JSON.stringify(input),
       signal: controller.signal,
       cache: 'no-store',
     });

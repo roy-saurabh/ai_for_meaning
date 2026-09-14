@@ -47,7 +47,7 @@ export function MirrorTopBar({ phase, receded, canGround, onGround, sound, trace
       >
         <OrbMark size={20} />
         <span className="hidden font-display text-[1.02rem] sm:inline">
-          AI for <span className="italic text-gold/95">Meaning</span>
+          AI for <span className="serif-italic text-gold/95">Meaning</span>
         </span>
       </Link>
 

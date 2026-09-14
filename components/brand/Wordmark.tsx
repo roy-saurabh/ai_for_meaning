@@ -2,7 +2,7 @@
 export function Wordmark({ className = '' }: { className?: string }) {
   return (
     <span className={`font-display text-[1.2rem] leading-none tracking-[-0.01em] ${className}`}>
-      AI for <span className="text-gold/95 italic">Meaning</span>
+      AI for <span className="serif-italic text-gold/95">Meaning</span>
     </span>
   );
 }

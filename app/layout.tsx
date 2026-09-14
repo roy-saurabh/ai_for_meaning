@@ -8,18 +8,21 @@ import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/seo/site';
 import '@/styles/globals.css';
 
 // Self-hosted at build time by next/font: no request to Google at runtime.
-const fraunces = Fraunces({
+const fraunces = Fraunces({ subsets: ['latin'], style: 'normal', axes: ['opsz'], display: 'swap', variable: '--font-fraunces' });
+// Italic is used for accents only: loaded on demand, not preloaded.
+const frauncesItalic = Fraunces({
   subsets: ['latin'],
-  axes: ['opsz'],
-  style: ['normal', 'italic'],
+  style: 'italic',
   display: 'swap',
-  variable: '--font-fraunces',
+  preload: false,
+  variable: '--font-fraunces-italic',
 });
 const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
 const spaceMono = Space_Mono({
   subsets: ['latin'],
-  weight: ['400', '700'],
+  weight: '400',
   display: 'swap',
+  preload: false,
   variable: '--font-space-mono',
 });
 
@@ -54,7 +57,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${inter.variable} ${spaceMono.variable}`}
+      className={`${fraunces.variable} ${frauncesItalic.variable} ${inter.variable} ${spaceMono.variable}`}
       suppressHydrationWarning
     >
       <head>

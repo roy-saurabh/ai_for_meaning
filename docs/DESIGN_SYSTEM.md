@@ -27,9 +27,10 @@ Self-hosted at build time with `next/font` (no runtime requests to Google).
 
 | Family | Role |
 | --- | --- |
-| Fraunces (opsz axis, italic) | Hero, section titles, reflective prompts (`serif-italic`) |
+| Fraunces upright (opsz axis, preloaded, fixed at `opsz 96`) | Hero, section titles |
+| Fraunces italic (loaded on demand, no opsz axis) | Accents and reflective prompts (`serif-italic`) |
 | Inter | Body, labels, forms |
-| Space Mono | Eyebrows, metadata, state labels, citations |
+| Space Mono 400 (not preloaded) | Eyebrows, metadata, state labels, citations |
 
 Scale: hero `display-xl` clamps 40 → 88 px; section `display-lg` 32 → 52 px; `display-md` 24 → 34 px;
 body 16–19 px (`lead`); annotations 11–13 px mono with 0.14–0.26 em tracking. Prose measure 66ch.

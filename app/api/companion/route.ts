@@ -1,6 +1,6 @@
 import { error, json, readJson } from '@/lib/api/responses';
 import { CloudReflectionProvider } from '@/lib/companion/cloud';
-import { companionInputSchema } from '@/lib/companion/types';
+import { companionInputSchema } from '@/lib/companion/schema';
 import { getCompanionConfig } from '@/lib/env/server';
 import { clientKey, limiter } from '@/lib/security/rate-limit';
 
