@@ -29,12 +29,18 @@ export default function SciencePage() {
       </PageHeader>
 
       <div className="wrap pb-10">
-        <nav aria-label="Themes" className="mb-14 flex flex-wrap gap-2">
-          {SCIENCE_THEMES.map((t) => (
-            <a key={t.id} href={`#${t.id}`} className="pill pill-sm pill-ghost">
-              {t.lens}: {t.title}
-            </a>
-          ))}
+        <nav aria-label="Themes" className="mb-14 max-w-[880px]">
+          <ol className="grid gap-x-10 border-t border-[var(--line)] md:grid-cols-2">
+            {SCIENCE_THEMES.map((t, i) => (
+              <li key={t.id} className="border-b border-[var(--line)]">
+                <a href={`#${t.id}`} className="group flex min-h-12 items-baseline gap-4 py-3" data-focus-shape="rect">
+                  <span className="font-mono text-[0.7rem] text-faint">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="text-[0.95rem] text-muted transition-colors group-hover:text-ink">{t.title}</span>
+                  <span className="label-mono ml-auto hidden shrink-0 whitespace-nowrap text-teal/80 sm:inline">{t.lens}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
         </nav>
 
         <div className="space-y-6">
@@ -64,7 +70,7 @@ export default function SciencePage() {
                       <h3 className="label-mono text-faint">References</h3>
                       <ul className="mt-2 space-y-2">
                         {refs.map((r) => (
-                          <li key={r.id} className="text-[0.85rem] leading-relaxed text-faint">
+                          <li key={r.id} className="break-words text-[0.85rem] leading-relaxed text-faint">
                             <Link href={`/references#${r.id}`} className="hover:text-muted">
                               {formatCitation(r)}
                             </Link>

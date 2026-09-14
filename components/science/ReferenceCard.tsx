@@ -29,7 +29,7 @@ export function ReferenceCard({ reference: r, compact = false }: { reference: Re
         {EVIDENCE_LABEL[r.evidenceType]} · {r.year}
       </p>
       <h3 className="mt-2 font-display text-[1.2rem] leading-snug">{r.title}</h3>
-      <p className="mt-2 text-[0.88rem] leading-relaxed text-faint">{formatCitation(r)}</p>
+      <p className="mt-2 break-words text-[0.88rem] leading-relaxed text-faint">{formatCitation(r)}</p>
       {!compact && (
         <>
           <p className="mt-3 max-w-[70ch] text-[0.95rem] leading-relaxed text-muted">{r.interpretation}</p>
@@ -41,7 +41,7 @@ export function ReferenceCard({ reference: r, compact = false }: { reference: Re
       )}
       <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[0.75rem]">
         {r.doi && (
-          <a href={`https://doi.org/${r.doi}`} className="text-[#9fb8ff] underline decoration-[#9fb8ff]/40 underline-offset-4 hover:decoration-[#9fb8ff]" rel="noopener noreferrer" target="_blank">
+          <a href={`https://doi.org/${r.doi}`} className="break-all text-[#9fb8ff] underline decoration-[#9fb8ff]/40 underline-offset-4 hover:decoration-[#9fb8ff]" rel="noopener noreferrer" target="_blank">
             doi:{r.doi}
           </a>
         )}
