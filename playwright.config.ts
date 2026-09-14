@@ -29,7 +29,7 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: `node node_modules/next/dist/bin/next start --port ${PORT} --hostname 127.0.0.1`,
+        command: `node scripts/prepare-standalone.mjs && PORT=${PORT} HOSTNAME=127.0.0.1 node .next/standalone/server.js`,
         url: `${baseURL}/api/health`,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

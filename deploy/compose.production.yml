@@ -1,0 +1,65 @@
+# AI for Meaning — production stack on the shared VPS.
+#
+# Isolation from the other stacks on this host is deliberate:
+#   - its own compose project name ("aiformeaning"), so `docker compose down` here can never touch
+#     another stack;
+#   - joins `al360-network` as an EXTERNAL network only so the shared edge nginx
+#     (al360-nginx-prod, which owns ports 80/443) can reach this container by name. This file can
+#     never create or remove that network;
+#   - published on 127.0.0.1 only, for health checks from the host. Never on 0.0.0.0;
+#   - explicit memory/CPU/pid ceilings, read-only root filesystem, no new privileges, all
+#     capabilities dropped.
+#
+# The image tag is set by /usr/local/bin/aiformeaning-deploy via .env.deploy (IMAGE_TAG=<git sha>).
+
+name: aiformeaning
+
+services:
+  web:
+    image: ghcr.io/roy-saurabh/ai_for_meaning:${IMAGE_TAG:?IMAGE_TAG must be set}
+    container_name: aiformeaning-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_PORT:-3230}:3000"
+    env_file:
+      - path: .env.production
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      NEXT_TELEMETRY_DISABLED: "1"
+    networks:
+      - aiformeaning
+      - al360-network
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          cpus: "0.5"
+          pids: 128
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m
+      - /app/.next/cache:size=64m,uid=1000,gid=1000
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+networks:
+  aiformeaning:
+    name: aiformeaning
+  al360-network:
+    external: true

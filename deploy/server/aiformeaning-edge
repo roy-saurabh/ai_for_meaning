@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# aiformeaning-edge — manage the aiformeaning.com virtual host on the SHARED nginx edge (al360-nginx-prod).
+#
+#   aiformeaning-edge install-http   Install the stage-1 HTTP vhost (ACME webroot + proxy) and reload.
+#   aiformeaning-edge check-dns      Verify apex and www resolve only to this server.
+#   aiformeaning-edge issue-cert     Obtain the certificate with certbot webroot (requires DNS).
+#   aiformeaning-edge enable-tls     Install the stage-2 HTTPS vhost and reload.
+#   aiformeaning-edge remove         Remove the vhost and reload (the app container is untouched).
+#
+# Every change is validated with `nginx -t` inside the edge container BEFORE reload; if validation
+# fails the previous file is restored, so a mistake here cannot take other sites down.
+set -euo pipefail
+
+EDGE=al360-nginx-prod
+CONFD=/srv/edge/nginx/conf.d
+TARGET="$CONFD/aiformeaning.com.conf"
+SRC=/opt/aiformeaning/nginx
+LE_CONFIG=/opt/al360/repo/letsencrypt
+WEBROOT=/opt/al360/repo/certbot
+SERVER_IPV4="${SERVER_IPV4:-62.72.16.195}"
+EMAIL="${CERTBOT_EMAIL:-}"
+
+log() { printf '[aiformeaning-edge] %s\n' "$*"; }
+die() { printf '[aiformeaning-edge] ERROR: %s\n' "$*" >&2; exit 1; }
+[ "$(id -u)" -eq 0 ] || die "must run as root"
+
+install_conf() {
+  local src="$1" backup=""
+  [ -f "$src" ] || die "missing $src"
+  if [ -f "$TARGET" ]; then backup="$(mktemp)"; cp "$TARGET" "$backup"; fi
+  install -m 0644 "$src" "$TARGET"
+  if docker exec "$EDGE" nginx -t >/dev/null 2>&1; then
+    docker exec "$EDGE" nginx -s reload
+    log "installed $(basename "$src") and reloaded the edge"
+  else
+    docker exec "$EDGE" nginx -t || true
+    if [ -n "$backup" ]; then cp "$backup" "$TARGET"; else rm -f "$TARGET"; fi
+    die "nginx validation failed — previous configuration restored, nothing reloaded"
+  fi
+}
+
+check_dns() {
+  local ok=0 host a aaaa
+  for host in aiformeaning.com www.aiformeaning.com; do
+    a="$(dig +short A "$host" @1.1.1.1 | grep -E '^[0-9.]+$' | sort -u | tr '\n' ' ')"
+    aaaa="$(dig +short AAAA "$host" @1.1.1.1 | grep ':' | sort -u | tr '\n' ' ')"
+    log "$host  A: ${a:-none}  AAAA: ${aaaa:-none}"
+    [ "$(echo "$a" | xargs)" = "$SERVER_IPV4" ] || { log "  → A must be exactly $SERVER_IPV4"; ok=1; }
+    if [ -n "$aaaa" ]; then
+      local v6; v6="$(ip -6 addr show scope global | awk '/inet6/{print $2}' | cut -d/ -f1 | head -1)"
+      [ "$(echo "$aaaa" | xargs)" = "$v6" ] || { log "  → AAAA ($aaaa) does not point to this server ($v6): remove it"; ok=1; }
+    fi
+  done
+  return $ok
+}
+
+case "${1:-}" in
+  install-http) install_conf "$SRC/aiformeaning.com.http.conf" ;;
+  check-dns) check_dns ;;
+  issue-cert)
+    check_dns || die "DNS is not ready; certificate issuance would fail"
+    curl -fsS -o /dev/null "http://aiformeaning.com/.well-known/acme-challenge/" -w '' 2>/dev/null || true
+    email_args=(--register-unsafely-without-email)
+    [ -n "$EMAIL" ] && email_args=(--email "$EMAIL" --no-eff-email)
+    certbot certonly --webroot -w "$WEBROOT" --config-dir "$LE_CONFIG" \
+      -d aiformeaning.com -d www.aiformeaning.com --key-type ecdsa \
+      --agree-tos --non-interactive "${email_args[@]}"
+    log "certificate issued; renewal is handled by the existing root cron (certbot renew --config-dir=$LE_CONFIG)"
+    ;;
+  enable-tls)
+    [ -f "$LE_CONFIG/live/aiformeaning.com/fullchain.pem" ] || die "no certificate yet — run issue-cert"
+    install_conf "$SRC/aiformeaning.com.https.conf" ;;
+  remove)
+    rm -f "$TARGET"
+    docker exec "$EDGE" nginx -t && docker exec "$EDGE" nginx -s reload
+    log "vhost removed" ;;
+  *) sed -n '2,12p' "$0" ;;
+esac

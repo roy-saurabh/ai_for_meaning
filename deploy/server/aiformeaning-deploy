@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+# aiformeaning-deploy — release activation for aiformeaning.com with health gating and rollback.
+#
+#   aiformeaning-deploy <git-sha>     Pull ghcr.io/roy-saurabh/ai_for_meaning:<git-sha>, start it, wait until
+#                                     healthy and serving the expected commit, smoke-test key paths.
+#                                     On any failure, switch back to the previous release and exit 1.
+#   aiformeaning-deploy --rollback    Switch back to the previous release.
+#   aiformeaning-deploy --status      Current/previous release and health.
+#
+# Installed at /usr/local/bin/aiformeaning-deploy (root:root 0755). The `aiformeaning` deploy user may run
+# only this script via sudo (see /etc/sudoers.d/aiformeaning). It only ever touches the `aiformeaning`
+# compose project — never the shared nginx edge or any other stack.
+set -euo pipefail
+
+APP_ROOT=/opt/aiformeaning
+COMPOSE_FILE="$APP_ROOT/compose.production.yml"
+DEPLOY_ENV="$APP_ROOT/.env.deploy"
+IMAGE_REPO=ghcr.io/roy-saurabh/ai_for_meaning
+APP_PORT="${APP_PORT:-3230}"
+BASE="http://127.0.0.1:$APP_PORT"
+READY_TIMEOUT="${READY_TIMEOUT:-120}"
+KEEP_IMAGES="${KEEP_IMAGES:-3}"
+LOCK=/run/lock/aiformeaning-deploy.lock
+SMOKE_PATHS="/ /mirror /science /ground /privacy /sitemap.xml /api/health"
+
+log() { printf '[aiformeaning-deploy] %s\n' "$*"; }
+die() { printf '[aiformeaning-deploy] ERROR: %s\n' "$*" >&2; exit 1; }
+
+[ "$(id -u)" -eq 0 ] || die "must run as root (use sudo)"
+exec 9>"$LOCK"
+flock -n 9 || die "another deployment is in progress"
+
+current_tag() { sed -n 's/^IMAGE_TAG=//p' "$DEPLOY_ENV" 2>/dev/null || true; }
+previous_tag() { cat "$APP_ROOT/previous-tag" 2>/dev/null || true; }
+
+compose() { docker compose -p aiformeaning -f "$COMPOSE_FILE" --env-file "$DEPLOY_ENV" "$@"; }
+
+health_commit() { curl -fsS --max-time 5 "$BASE/api/health" 2>/dev/null | sed -n 's/.*"commit":"\([^"]*\)".*/\1/p'; }
+
+wait_healthy() {
+  local expected="$1" deadline=$((SECONDS + READY_TIMEOUT)) got
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    got="$(health_commit || true)"
+    if [ -n "$got" ] && [ "${expected#"$got"}" != "$expected" ]; then return 0; fi
+    sleep 2
+  done
+  return 1
+}
+
+smoke() {
+  local failed=0 code p
+  for p in $SMOKE_PATHS; do
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$p" || true)
+    log "  $p → $code"
+    [ "$code" = 200 ] || failed=1
+  done
+  return $failed
+}
+
+activate() {
+  local tag="$1"
+  printf 'IMAGE_TAG=%s\nAPP_PORT=%s\n' "$tag" "$APP_PORT" > "$DEPLOY_ENV.next"
+  mv "$DEPLOY_ENV.next" "$DEPLOY_ENV"
+  compose up -d --remove-orphans --wait --wait-timeout "$READY_TIMEOUT" || true
+}
+
+deploy() {
+  local tag="$1" prev
+  [[ "$tag" =~ ^[0-9a-f]{7,40}$ ]] || die "tag must be a git commit sha (7–40 hex chars)"
+  [ -f "$COMPOSE_FILE" ] || die "missing $COMPOSE_FILE — run provision first"
+  prev="$(current_tag)"
+  log "pulling $IMAGE_REPO:$tag"
+  docker pull --quiet "$IMAGE_REPO:$tag" >/dev/null || die "could not pull image"
+  log "activating $tag (previous: ${prev:-none})"
+  activate "$tag"
+  if wait_healthy "$tag" && smoke; then
+    [ -n "$prev" ] && [ "$prev" != "$tag" ] && echo "$prev" > "$APP_ROOT/previous-tag"
+    log "release $tag is live"
+    prune
+    return 0
+  fi
+  log "release $tag failed health or smoke checks"
+  if [ -n "$prev" ] && [ "$prev" != "$tag" ]; then
+    log "rolling back to $prev"
+    activate "$prev"
+    if wait_healthy "$prev"; then log "rolled back to $prev"; else log "rollback also unhealthy — investigate: docker logs aiformeaning-web"; fi
+  fi
+  exit 1
+}
+
+rollback() {
+  local prev cur
+  prev="$(previous_tag)"; cur="$(current_tag)"
+  [ -n "$prev" ] || die "no previous release recorded"
+  log "rolling back $cur → $prev"
+  activate "$prev"
+  if ! { wait_healthy "$prev" && smoke; }; then die "previous release is not healthy"; fi
+  echo "$cur" > "$APP_ROOT/previous-tag"
+  log "rolled back to $prev"
+}
+
+prune() {
+  docker image ls "$IMAGE_REPO" --format '{{.Tag}} {{.CreatedAt}}' \
+    | sort -k2 -r | awk 'NR>'"$KEEP_IMAGES"' {print $1}' \
+    | while read -r old; do
+        [ "$old" = "$(current_tag)" ] || [ "$old" = "$(previous_tag)" ] || docker image rm "$IMAGE_REPO:$old" >/dev/null 2>&1 || true
+      done
+}
+
+status() {
+  log "current:  $(current_tag || echo none)"
+  log "previous: $(previous_tag || echo none)"
+  log "container: $(docker inspect -f '{{.State.Status}} ({{if .State.Health}}{{.State.Health.Status}}{{else}}no healthcheck{{end}})' aiformeaning-web 2>/dev/null || echo absent)"
+  log "health:   $(curl -fsS --max-time 5 "$BASE/api/health" 2>/dev/null || echo unreachable)"
+}
+
+case "${1:-}" in
+  --status) status ;;
+  --rollback) rollback ;;
+  ""|-h|--help) sed -n '2,13p' "$0" ;;
+  *) deploy "$1" ;;
+esac

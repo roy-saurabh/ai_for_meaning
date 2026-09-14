@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# aiformeaning-ssh-gate — forced command for the `aiformeaning` deploy key.
+#
+# authorized_keys pins the CI key to this script, so the key can do exactly three things and nothing
+# else (no shell, no port forwarding, no file transfer):
+#   deploy <git-sha> | status | rollback
+set -euo pipefail
+read -r -a args <<< "${SSH_ORIGINAL_COMMAND:-}"
+case "${args[0]:-}" in
+  deploy)
+    [[ "${args[1]:-}" =~ ^[0-9a-f]{7,40}$ ]] || { echo "usage: deploy <git-sha>" >&2; exit 2; }
+    exec sudo -n /usr/local/bin/aiformeaning-deploy "${args[1]}" ;;
+  status) exec sudo -n /usr/local/bin/aiformeaning-deploy --status ;;
+  rollback) exec sudo -n /usr/local/bin/aiformeaning-deploy --rollback ;;
+  *) echo "allowed: deploy <git-sha> | status | rollback" >&2; exit 2 ;;
+esac
