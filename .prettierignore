@@ -1,0 +1,8 @@
+.next
+node_modules
+pnpm-lock.yaml
+docs/reference
+playwright-report
+test-results
+tests/e2e/__screenshots__
+public/sw.js
