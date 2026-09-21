@@ -46,7 +46,7 @@ jobs:
             type=raw,value=${{ github.sha }}
             type=raw,value=main
 
-      - uses: docker/build-push-action@v7.3.0
+      - uses: docker/build-push-action@v7.4.0
         with:
           context: .
           platforms: linux/amd64
